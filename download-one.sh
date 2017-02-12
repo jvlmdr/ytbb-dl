@@ -20,7 +20,7 @@ mkdir -p $dst/partial/$video
 (
 	cd $dst/partial/$video
 	set -o pipefail
-	youtube-dl -f '(bestvideo,bestaudio)/best' -o '%(id)s.f%(format_id)s.%(ext)s' --newline -- $video \
+	youtube-dl -f '(bestvideo,bestaudio)/best' -o '%(id)s.f%(format_id)s.%(ext)s' --newline -- "https://www.youtube.com/watch?v=$video" \
 		2>err.txt | tee out.txt
 )
 result=$?
