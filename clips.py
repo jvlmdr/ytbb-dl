@@ -2,9 +2,7 @@ import argparse
 import csv
 import os
 import os.path
-import re
 import subprocess
-import tempfile
 
 import ytbb
 import download
@@ -43,9 +41,10 @@ def main():
                 print '%s: video not found' % video_id
                 continue
             # Attempt to find video file.
-            video_file = download.find_video_file(in_dir, video_id)
+            video_file = download.find_video_file(in_dir)
             if not video_file:
                 raise ValueError('could not find video file: %s' % in_dir)
+            video_file = os.path.join(in_dir, video_file)
 
             times = [int(row['timestamp_ms']) for row in d[video_id][track_id]]
             start, end = (float(x)/1e3 for x in [min(times), max(times)])
@@ -86,6 +85,7 @@ def decode_frames_interval(dst_dir, video_file, start, end):
         '-r', '30',
         '-vframes', str(num_frames),
         '-q:v', '2',
+        '-vf', 'scale=-1:min(360,ih)',
         '-start_number', str(start_num),
         os.path.join(dst_dir, '%08d.jpg')])
     if status != 0:

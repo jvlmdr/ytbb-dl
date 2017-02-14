@@ -35,9 +35,10 @@ def main():
             print '%s: video not found' % video_id
             continue
         # Attempt to find video file.
-        video_file = download.find_video_file(in_dir, video_id)
+        video_file = download.find_video_file(in_dir)
         if not video_file:
             raise ValueError('could not find video file: %s' % in_dir)
+        video_file = os.path.join(in_dir, video_file)
 
         times = [float(x)/1e3 for x in d[video_id]]
         tmp_dir = os.path.join(args.tmp_dir, video_id)
