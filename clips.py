@@ -85,7 +85,7 @@ def decode_frames_interval(dst_dir, video_file, start, end):
         '-r', '30',
         '-vframes', str(num_frames),
         '-q:v', '2',
-        '-vf', 'scale=-1:min(360,ih)',
+        '-vf', 'scale=w=min(iw\,max(360\,iw*360/ih)):h=min(ih\,max(ih*360/iw\,360))',
         '-start_number', str(start_num),
         os.path.join(dst_dir, '%08d.jpg')])
     if status != 0:
