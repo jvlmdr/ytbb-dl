@@ -17,6 +17,7 @@ def main():
     parser.add_argument('video_dir', metavar='videos/')
     parser.add_argument('clip_dir', metavar='clips/')
     parser.add_argument('tmp_dir', metavar='tmp/')
+    parser.add_argument('--video', action='store_true')
     args = parser.parse_args()
 
     print 'read CSV file'
@@ -44,14 +45,20 @@ def main():
             video_file = download.find_video_file(in_dir)
             if not video_file:
                 raise ValueError('could not find video file: %s' % in_dir)
-            video_file = os.path.join(in_dir, video_file)
+            video_path = os.path.join(in_dir, video_file)
 
             times = [int(row['timestamp_ms']) for row in d[video_id][track_id]]
             start, end = (float(x)/1e3 for x in [min(times), max(times)])
             tmp_dir = os.path.join(args.tmp_dir, '%s-%s' % (video_id, track_str))
             create_tmp_dir(tmp_dir)
-            # Add one second to the end to allow a lag.
-            decode_frames_interval(tmp_dir, video_file, start, end+1)
+
+            if args.video:
+                _, ext = os.path.splitext(video_file)
+                out_path = os.path.join(tmp_dir, track_str+ext)
+                cut_video_interval(out_path, video_path, start, end+1)
+            else:
+                # Add one second to the end to allow a lag.
+                decode_frames_interval(tmp_dir, video_path, start, end+1)
 
             # Write CSV file
             boxes_file = os.path.join(tmp_dir, 'boxes.csv')
@@ -72,6 +79,24 @@ def split_tracks(r):
         track_id = (category, instance)
         d.setdefault(video_id, {}).setdefault(track_id, []).append(row)
     return d
+
+def cut_video_interval(dst_file, src_file, start, end):
+    start_num = round(start * 30)
+    num_frames = round(30 * (end-start)) + 1
+    # Should check if dst_dir contains '%'
+    status = subprocess.call(['ffmpeg',
+        '-v', 'warning',
+        '-accurate_seek',
+        '-ss', str(start),
+        '-t', str(end - start),
+        '-i', src_file,
+        '-vcodec', 'copy',
+        '-an',
+        # '-r', '30',
+        # '-vframes', str(num_frames),
+        dst_file])
+    if status != 0:
+        raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
 
 def decode_frames_interval(dst_dir, video_file, start, end):
     start_num = round(start * 30)
