@@ -25,40 +25,44 @@ def main():
         d = split_tracks(f)
 
     for video_id in d.keys():
+        # Confirm that input file exists.
+        in_dir = os.path.join(args.video_dir, video_id)
+        if not os.path.isdir(in_dir):
+            print '%s: video not found' % video_id
+            continue
+        # Attempt to find video file.
+        video_file = download.find_video_file(in_dir)
+        if not video_file:
+            raise ValueError('could not find video file: %s' % in_dir)
+        video_path = os.path.join(in_dir, video_file)
+
+        # Video directory.
         dst_video = os.path.join(args.clip_dir, video_id)
-        if not os.path.isdir(dst_video):
-            os.makedirs(dst_video, 0755)
 
         for track_id in d[video_id].keys():
-            track_str = '%s-%d' % track_id
+            category, instance = track_id
+            track_str = '%s-%d' % (category.replace(' ', '-'), instance)
+            prefix = '%s %s' % (video_id, track_str)
             # Skip if output directory already exists.
             dst_clip = os.path.join(dst_video, track_str)
             if os.path.isdir(dst_clip):
-                print '%s: skip' % video_id
+                print '%s: skip' % prefix
                 continue
-            # Confirm that input file exists.
-            in_dir = os.path.join(args.video_dir, video_id)
-            if not os.path.isdir(in_dir):
-                print '%s: video not found' % video_id
-                continue
-            # Attempt to find video file.
-            video_file = download.find_video_file(in_dir)
-            if not video_file:
-                raise ValueError('could not find video file: %s' % in_dir)
-            video_path = os.path.join(in_dir, video_file)
 
+            print '%s: process' % prefix
             times = [int(row['timestamp_ms']) for row in d[video_id][track_id]]
             start, end = (float(x)/1e3 for x in [min(times), max(times)])
+            # Add one second to allow frames to be processed with a lag.
+            end += 1
             tmp_dir = os.path.join(args.tmp_dir, '%s-%s' % (video_id, track_str))
             create_tmp_dir(tmp_dir)
 
             if args.video:
                 _, ext = os.path.splitext(video_file)
                 out_path = os.path.join(tmp_dir, track_str+ext)
-                cut_video_interval(out_path, video_path, start, end+1)
+                cut_video_interval(out_path, video_path, start, end)
             else:
-                # Add one second to the end to allow a lag.
-                decode_frames_interval(tmp_dir, video_path, start, end+1)
+                decode_frames_interval(tmp_dir, video_path, start, end)
 
             # Write CSV file
             boxes_file = os.path.join(tmp_dir, 'boxes.csv')
@@ -67,6 +71,10 @@ def main():
                 for row in d[video_id][track_id]:
                     w.writerow(row)
 
+            # Ensure that parent directory exists.
+            if not os.path.isdir(dst_video):
+                os.makedirs(dst_video, 0755)
+            # Move from temporary location.
             os.rename(tmp_dir, dst_clip)
 
 def split_tracks(r):

@@ -65,6 +65,7 @@ def decode_frames(dst_dir, video_file, times):
             '-i', video_file,
             '-vframes', '1',
             '-q:v', '2',
+            '-vf', 'scale=w=min(iw\,max(360\,iw*360/ih)):h=min(ih\,max(ih*360/iw\,360))',
             os.path.join(dst_dir, '%d.jpg' % int(round(1000*t)))])
         if status != 0:
             raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
