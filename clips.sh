@@ -29,4 +29,4 @@ boxes=$1    ; shift # e.g. /datasets/youtube-bb/train/boxes
 clips=$1    ; shift # e.g. /datasets/youtube-bb/train/clips
 tmp=$1      ; shift # e.g. /datasets/youtube-bb/train/tmp/clips
 
-cat $download/videos.txt | xargs -t -I{} -n 1 -P 1 python clips.py $@ $boxes/{}.csv $download/complete/ $clips $tmp
+cat $download/videos.txt | xargs -t -I{} -n 1 -P 8 python clips.py $@ $boxes/{}.csv $download/complete/ $clips $tmp
