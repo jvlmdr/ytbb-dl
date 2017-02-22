@@ -142,7 +142,7 @@ def cut_video_interval(dst_file, src_file, start, end, video=False, max_size=0, 
         ]
         output_args += size_args
 
-    command = ['echo', 'ffmpeg', '-nostdin'] + input_args + ['-i', src_file] + output_args + [dst_file]
+    command = ['ffmpeg', '-nostdin'] + input_args + ['-i', src_file] + output_args + [dst_file]
     status = subprocess.call(command)
     if status != 0:
         raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
