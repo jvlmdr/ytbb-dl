@@ -12,12 +12,16 @@ import download
 # clips/{video}/{category}-{index}/boxes.csv
 
 def main():
-    parser = argparse.ArgumentParser(description='Identifies clips')
+    parser = argparse.ArgumentParser(description='Extracts clips from larger video')
     parser.add_argument('boxes_file', metavar='boxes.csv')
     parser.add_argument('video_dir', metavar='videos/')
     parser.add_argument('clip_dir', metavar='clips/')
     parser.add_argument('tmp_dir', metavar='tmp/')
     parser.add_argument('--video', action='store_true')
+    parser.add_argument('--video_codec', type=str)
+    parser.add_argument('--video_ext', type=str)
+    parser.add_argument('--max_size', type=int,
+        help='Maximum size of small edge of video')
     args = parser.parse_args()
 
     print 'read CSV file'
@@ -58,11 +62,17 @@ def main():
             create_tmp_dir(tmp_dir)
 
             if args.video:
-                _, ext = os.path.splitext(video_file)
+                # Use user-specified extension if given.
+                if args.video_ext:
+                    ext = args.video_ext
+                    if ext[0] != '.':
+                        ext = '.' + ext
+                else:
+                    _, ext = os.path.splitext(video_file)
                 out_path = os.path.join(tmp_dir, track_str+ext)
-                cut_video_interval(out_path, video_path, start, end)
+                cut_video_interval(out_path, video_path, start, end, max_size=args.max_size, codec=args.video_codec)
             else:
-                decode_frames_interval(tmp_dir, video_path, start, end)
+                decode_frames_interval(tmp_dir, video_path, start, end, max_size=args.max_size)
 
             # Write CSV file
             boxes_file = os.path.join(tmp_dir, 'boxes.csv')
@@ -88,25 +98,33 @@ def split_tracks(r):
         d.setdefault(video_id, {}).setdefault(track_id, []).append(row)
     return d
 
-def cut_video_interval(dst_file, src_file, start, end):
+def cut_video_interval(dst_file, src_file, start, end, max_size=0, codec=None):
     start_num = round(start * 30)
     num_frames = round(30 * (end-start)) + 1
-    # Should check if dst_dir contains '%'
-    status = subprocess.call(['ffmpeg',
-        '-v', 'warning',
+    # Unless otherwise specified, use same codec as input.
+    if not codec:
+        codec = 'copy'
+    size_args = []
+    if max_size:
+        size_args = ['-vf', ('scale=' +
+            'w=2*trunc((1+min(iw\,max({0}\,iw*{0}/ih)))/2):' +
+            'h=2*trunc((1+min(ih\,max(ih*{0}/iw\,{0})))/2)').format(max_size)]
+    args = (
+        ['-nostdin',
         '-accurate_seek',
         '-ss', str(start),
         '-t', str(end - start),
         '-i', src_file,
-        '-vcodec', 'copy',
-        '-an',
-        # '-r', '30',
-        # '-vframes', str(num_frames),
-        dst_file])
+        '-vcodec', codec,
+        '-an'] +
+        size_args +
+        [dst_file])
+    status = subprocess.call(['ffmpeg'] + args)
     if status != 0:
         raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
 
-def decode_frames_interval(dst_dir, video_file, start, end):
+def decode_frames_interval(dst_dir, video_file, start, end, max_size=0):
+    # TODO: Should check if dst_file contains '%'
     start_num = round(start * 30)
     num_frames = round(30 * (end-start)) + 1
     # Should check if dst_dir contains '%'
