@@ -17,6 +17,8 @@ def main():
     parser.add_argument('video_dir', metavar='videos/')
     parser.add_argument('frame_dir', metavar='frames/')
     parser.add_argument('tmp_dir', metavar='tmp/')
+    parser.add_argument('--max_size', type=int, help='Maximum size of small edge')
+    parser.add_argument('--size_str', type=str, help='String to pass to ffmpeg e.g. "200:200", "320:-1"')
     args = parser.parse_args()
 
     print 'read CSV file'
@@ -43,7 +45,9 @@ def main():
         times = [float(x)/1e3 for x in d[video_id]]
         tmp_dir = os.path.join(args.tmp_dir, video_id)
         create_tmp_dir(tmp_dir)
-        decode_frames(tmp_dir, video_file, times)
+        decode_frames(tmp_dir, video_file, times,
+                      size_str=args.size_str,
+                      max_size=args.max_size)
 
         os.rename(tmp_dir, dst_dir)
 
@@ -55,18 +59,34 @@ def extract_frames(r):
         d.setdefault(video_id, set()).add(int(row['timestamp_ms']))
     return d
 
-def decode_frames(dst_dir, video_file, times):
+def decode_frames(dst_dir, src_file, times, size_str=None, max_size=0):
+    if not size_str:
+        if max_size:
+            w_str = 'min(iw\,max({0}\,iw*{0}/ih))'.format(max_size)
+            h_str = 'min(ih\,max(ih*{0}/iw\,{0}))'.format(max_size)
+            size_str = 'w={}:h={}'.format(w_str, h_str)
+
+    input_args = [
+        '-accurate_seek',
+    ]
+    output_args = [
+        '-vframes', '1',
+        '-q:v', '2',
+    ]
+    if size_str:
+        output_args += ['-vf', 'scale='+size_str]
+
     for t in times:
         # Should check if dst_dir contains '%'
-        status = subprocess.call(['ffmpeg',
-            '-v', 'warning',
-            '-accurate_seek',
-            '-ss', str(t),
-            '-i', video_file,
-            '-vframes', '1',
-            '-q:v', '2',
-            '-vf', 'scale=w=min(iw\,max(360\,iw*360/ih)):h=min(ih\,max(ih*360/iw\,360))',
-            os.path.join(dst_dir, '%d.jpg' % int(round(1000*t)))])
+        dst_file = os.path.join(dst_dir, '%d.jpg' % int(round(1000*t)))
+        command = (
+            ['ffmpeg', '-nostdin', '-v', 'warning'] +
+            input_args +
+            ['-ss', str(t)] +
+            ['-i', src_file] +
+            output_args +
+            [dst_file])
+        status = subprocess.call(command)
         if status != 0:
             raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
 

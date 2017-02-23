@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [[ $# -ne 4 ]]; then
-	echo "usage: $0 download/ boxes/ frames/ tmp/"
+if [[ $# -lt 4 ]]; then
+	echo "usage: $0 download/ boxes/ frames/ tmp/ [options]"
 	echo
 	echo 'Reads videos from download/ and writes images to frames/'
 	echo 'Calls frames.py in parallel.'
@@ -24,9 +24,9 @@ if [[ $# -ne 4 ]]; then
 	exit 1
 fi
 
-download=$1 # e.g. /datasets/youtube-bb/train/download
-boxes=$2    # e.g. /datasets/youtube-bb/train/boxes
-frames=$3   # e.g. /datasets/youtube-bb/train/frames
-tmp=$4      # e.g. /datasets/youtube-bb/train/tmp-frames
+download=$1 ; shift # e.g. /datasets/youtube-bb/train/download
+boxes=$1    ; shift # e.g. /datasets/youtube-bb/train/boxes
+frames=$1   ; shift # e.g. /datasets/youtube-bb/train/frames
+tmp=$1      ; shift # e.g. /datasets/youtube-bb/train/tmp-frames
 
-cat $download/videos.txt | xargs -I{} -n 1 -P 8 python frames.py $boxes/{}.csv $download/complete/ $frames $tmp
+cat $download/videos.txt | xargs -I{} -n 1 -P 8 python frames.py $boxes/{}.csv $download/complete/ $frames $tmp $@
