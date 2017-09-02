@@ -1,5 +1,7 @@
 #!/bin/bash
 
+num_parallel=16
+
 if [[ $# -ne 2 ]]; then
 	echo "usage: $0 dst/ labels.csv"
 	exit 1
@@ -18,7 +20,7 @@ if [ ! -f "$dst/videos.txt" ]; then
 fi
 
 # Download every video.
-xargs -n 1 -P 16 ./download-one.sh $dst <$dst/videos.txt
+xargs -n 1 -P ${num_parallel} ./download-one.sh $dst <$dst/videos.txt
 
 # Find videos which are just not available.
 (

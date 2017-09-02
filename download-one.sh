@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# e.g. format="[fps=30][height<=360]"
+format="[fps=30]"
+
 if [[ $# -ne 2 ]]; then
 	echo "usage: $0 dst/ video-id"
 	exit 1
@@ -20,7 +23,11 @@ mkdir -p $dst/partial/$video
 (
 	cd $dst/partial/$video
 	set -o pipefail
-	youtube-dl -f '(bestvideo,bestaudio)/best' -o '%(id)s.f%(format_id)s.%(ext)s' --newline -- "https://www.youtube.com/watch?v=$video" \
+	youtube-dl \
+        -f "(bestvideo${format},bestaudio)/best${format}" \
+        -o '%(id)s.f%(format_id)s.%(ext)s' \
+        --newline \
+        -- "https://www.youtube.com/watch?v=$video" \
 		2>err.txt | tee out.txt
 )
 result=$?

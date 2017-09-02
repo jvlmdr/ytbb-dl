@@ -2,13 +2,12 @@ import os
 import os.path
 import re
 
-# https://github.com/rg3/youtube-dl/blob/master/youtube_dl/extractor/youtube.py
+import youtube_dl
+
 VIDEO_FORMATS = {
-    5, 6, 13, 17, 18, 22, 34, 35, 36, 37, 38, 43, 44, 45, 46, 59, 78,
-    91, 92, 93, 94, 95, 96, 132, 151,
-    133, 134, 135, 136, 137, 138, 160, 212, 264, 298, 299, 266,
-    167, 168, 169, 170, 218, 219, 278, 242, 243, 244, 245, 246, 247, 248, 271, 272, 302, 303, 308, 313, 315,
-    213, 215}
+    k for k, v in youtube_dl.extractor.youtube.YoutubeIE._formats.items()
+    if 'vcodec' in v
+}
 
 pattern = re.compile(r'^.*\.f(\d+)\..*$')
 
@@ -21,7 +20,7 @@ def find_video_file(d):
     matches = [m for m in matches if m]
     if not matches:
         return None
-    matches = [m.group(0) for m in matches if int(m.group(1)) in VIDEO_FORMATS]
+    matches = [m.group(0) for m in matches if m.group(1) in VIDEO_FORMATS]
     if not matches:
         return None
     if len(matches) > 1:
