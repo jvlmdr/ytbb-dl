@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# e.g. format="[fps=30][height<=360]"
-format="[fps=30]"
+# youtube_dl_flags="-r 1M"
+YOUTUBE_DL_FORMAT="${YOUTUBE_DL_FORMAT:-"bestvideo/best"}"
+YOUTUBE_DL_FLAGS="${YOUTUBE_DL_FLAGS}" # Default is empty string.
 
 if [[ $# -ne 2 ]]; then
 	echo "usage: $0 dst/ video-id"
@@ -22,11 +23,13 @@ fi
 mkdir -p $dst/partial/$video
 (
 	cd $dst/partial/$video
+    # set -x
 	set -o pipefail
 	youtube-dl \
-        -f "(bestvideo${format},bestaudio)/best${format}" \
+        -f "${YOUTUBE_DL_FORMAT}" \
         -o '%(id)s.f%(format_id)s.%(ext)s' \
         --newline \
+        ${YOUTUBE_DL_FLAGS} \
         -- "https://www.youtube.com/watch?v=$video" \
 		2>err.txt | tee out.txt
 )

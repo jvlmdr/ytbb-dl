@@ -35,9 +35,9 @@ $ROOT/train/download/
 
 The video and audio will be saved in `complete/[VIDEO]/[VIDEO].f[FORMAT].[EXT]`.
 
-The script `download.sh` invokes `download-one.sh` many times in parallel using `xargs -P`.
+The script `download.sh` invokes `download_one.sh` many times in parallel using `xargs -P`.
 To change the number of parallel processes, change `$num_parallel` in `download.sh`.
-To modify the resolution that is downloaded, change `$format` in `download-one.sh`.
+To modify the resolution that is downloaded, change `$format` in `download_one.sh`.
 
 It is not obvious which file is the video and which is the audio.
 The script `make_video_links.py` can be used to create a directory with a single file per video.

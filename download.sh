@@ -1,30 +1,34 @@
 #!/bin/bash
 
-num_parallel=16
+NUM_PARALLEL="${NUM_PARALLEL:-16}"
 
 if [[ $# -ne 2 ]]; then
 	echo "usage: $0 dst/ labels.csv"
 	exit 1
 fi
-dst=$1
-labels=$2
+dst="$(readlink -m "$1")"
+labels="$2"
 
 # Directory dst will have structure:
 # dst/videos.txt
 # dst/partial/
 # dst/complete/
 
-mkdir -p $dst
+mkdir -p "$dst"/{partial,complete}
 if [ ! -f "$dst/videos.txt" ]; then
-	cut -d, -f1 <$labels | uniq | shuf >$dst/videos.txt
+	cut -d, -f1 <"$labels" | uniq >"$dst/videos.txt"
 fi
 
-# Download every video.
-xargs -n 1 -P ${num_parallel} ./download-one.sh $dst <$dst/videos.txt
-
-# Find videos which are just not available.
 (
-	cd $dst
-	grep -l 'ERROR:.*YouTube said:' $(find partial/ -name err.txt) | \
-		awk '-F/' '{print $2}' >$dst/missing.txt
+    cd "$dst"
+    # Videos that are missing from YouTube.
+    # Clear partial/ to try again.
+    find partial/ -name err.txt -print0 | xargs -0 grep -l 'ERROR:.*YouTube said:' | \
+        awk '-F/' '{print $2}' >missing.txt
+    echo "number of unavailable videos: $(wc -l missing.txt)"
+    # Get list of videos that are not missing and not complete.
+    comm -23 <(cat videos.txt | sort) <(cat <(ls complete) missing.txt | sort) >remain.txt
+    echo "number of available videos that remain: $(wc -l remain.txt)"
 )
+# Download!
+cat "$dst/remain.txt" | shuf | xargs -n 1 -P "${NUM_PARALLEL}" ./download_one.sh "$dst"

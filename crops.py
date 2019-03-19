@@ -1,3 +1,11 @@
+'''
+Input: frames/ has structure:
+  frames/{video}/{time}.jpg
+
+Output: crops/ has structure:
+  crops/{video}/{category}-{index}/{time}.jpg
+'''
+
 import argparse
 import csv
 import numpy as np
@@ -7,16 +15,8 @@ import subprocess
 # import scipy.misc
 from PIL import Image
 
-import ytbb
-import download
+from ytbbdl import ytbb
 
-import pdb
-
-# Input: frames/ has structure:
-#   frames/{video}/{time}.jpg
-#
-# Output: crops/ has structure:
-#   crops/{video}/{category}-{index}/{time}.jpg
 
 def main():
     parser = argparse.ArgumentParser(description='Extracts clips from larger video')
@@ -25,14 +25,14 @@ def main():
     parser.add_argument('crop_dir', metavar='crops/')
     parser.add_argument('tmp_dir', metavar='tmp/')
     parser.add_argument('--context', type=float, default=0.5,
-        help='Context times mean dimension is padded on all sides')
+                        help='Context times mean dimension is padded on all sides')
     parser.add_argument('--context_size', type=int, default=127,
-        help='Size of context region')
+                        help='Size of context region')
     parser.add_argument('--search_size', type=int, default=255,
-        help='Size of search region')
+                        help='Size of search region')
     args = parser.parse_args()
 
-    print 'read CSV file'
+    print('read CSV file')
     with open(args.boxes_file, 'r') as f:
         d = split_tracks(f)
 
@@ -40,7 +40,7 @@ def main():
         # Confirm that input files exist.
         src_dir = os.path.join(args.frame_dir, video_id)
         if not os.path.isdir(src_dir):
-            print '%s: frames not found' % video_id
+            print('%s: frames not found' % video_id)
             continue
 
         for track_id in d[video_id].keys():
@@ -51,10 +51,10 @@ def main():
             dst_video_dir = os.path.join(args.crop_dir, video_id)
             dst_track_dir = os.path.join(dst_video_dir, track_str)
             if os.path.isdir(dst_track_dir):
-                print prefix + 'skip'
+                print(prefix + 'skip')
                 continue
 
-            print prefix + 'process'
+            print(prefix + 'process')
             # objs = [row for row in d[video_id][track_id] if row['object_presence'] == 'present']
             objs = d[video_id][track_id]
             tmp_dir = os.path.join(args.tmp_dir, '%s-%s' % (video_id, track_str))
@@ -67,12 +67,12 @@ def main():
                     src_im = os.path.join(src_dir, fname)
                     dst_im = os.path.join(tmp_dir, fname)
                     if not os.path.isfile(src_im):
-                        print prefix + 'skip missing frame: {}'.format(src_im)
+                        print(prefix + 'skip missing frame: {}'.format(src_im))
                         continue
                     crop_obj = crop(dst_im, src_im, obj,
-                        context=args.context,
-                        context_size=args.context_size,
-                        search_size=args.search_size)
+                                    context=args.context,
+                                    context_size=args.context_size,
+                                    search_size=args.search_size)
                 else:
                     crop_obj = obj
                 crop_objs.append(crop_obj)
@@ -86,9 +86,10 @@ def main():
 
             # Ensure that parent directory exists.
             if not os.path.isdir(dst_video_dir):
-                os.makedirs(dst_video_dir, 0755)
+                os.makedirs(dst_video_dir, 0o755)
             # Move from temporary location.
             os.rename(tmp_dir, dst_track_dir)
+
 
 def split_tracks(r):
     d = {}
@@ -100,6 +101,7 @@ def split_tracks(r):
         track_id = (category, instance)
         d.setdefault(video_id, {}).setdefault(track_id, []).append(row)
     return d
+
 
 def crop(dst_file, src_file, obj, context=None, context_size=None, search_size=None):
     # Load image and convert relative coords to absolute using its size.
@@ -178,17 +180,20 @@ def crop(dst_file, src_file, obj, context=None, context_size=None, search_size=N
     crop_obj['ymax'] = '{:.6f}'.format(f_max_rel[1])
     return crop_obj
 
+
 def create_tmp_dir(d):
     if os.path.isdir(d):
         clear_dir(d)
         os.rmdir(d)
-    os.makedirs(d, 0755)
+    os.makedirs(d, 0o755)
+
 
 def clear_dir(d):
     # Deletes all files in a directory.
     fs = os.listdir(d)
     for f in fs:
         os.remove(os.path.join(d, f))
+
 
 if __name__ == '__main__':
     main()

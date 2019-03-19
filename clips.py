@@ -1,15 +1,18 @@
+'''
+Creates directory structure:
+clips/{video}/{category}-{index}/{frame}.jpg
+clips/{video}/{category}-{index}/boxes.csv
+'''
+
 import argparse
 import csv
 import os
 import os.path
 import subprocess
 
-import ytbb
-import download
+from ytbbdl import ytbb
+from ytbbdl import download
 
-# Creates directory structure:
-# clips/{video}/{category}-{index}/{frame}.jpg
-# clips/{video}/{category}-{index}/boxes.csv
 
 def main():
     parser = argparse.ArgumentParser(description='Extracts clips from larger video')
@@ -21,10 +24,10 @@ def main():
     parser.add_argument('--video_codec', type=str)
     parser.add_argument('--video_ext', type=str)
     parser.add_argument('--max_size', type=int,
-        help='Maximum size of small edge of video')
+                        help='Maximum size of small edge of video')
     args = parser.parse_args()
 
-    print 'read CSV file'
+    print('read CSV file')
     with open(args.boxes_file, 'r') as f:
         d = split_tracks(f)
 
@@ -32,7 +35,7 @@ def main():
         # Confirm that input file exists.
         in_dir = os.path.join(args.video_dir, video_id)
         if not os.path.isdir(in_dir):
-            print '%s: video not found' % video_id
+            print('%s: video not found' % video_id)
             continue
         # Attempt to find video file.
         video_file = download.find_video_file(in_dir)
@@ -50,10 +53,10 @@ def main():
             # Skip if output directory already exists.
             dst_clip = os.path.join(dst_video, track_str)
             if os.path.isdir(dst_clip):
-                print '%s: skip' % prefix
+                print('%s: skip' % prefix)
                 continue
 
-            print '%s: process' % prefix
+            print('%s: process' % prefix)
             times = [int(row['timestamp_ms']) for row in d[video_id][track_id]]
             start, end = (float(x)/1e3 for x in [min(times), max(times)])
             # Add one second to allow frames to be processed with a lag.
@@ -86,9 +89,10 @@ def main():
 
             # Ensure that parent directory exists.
             if not os.path.isdir(dst_video):
-                os.makedirs(dst_video, 0755)
+                os.makedirs(dst_video, 0o755)
             # Move from temporary location.
             os.rename(tmp_dir, dst_clip)
+
 
 def split_tracks(r):
     d = {}
@@ -100,6 +104,7 @@ def split_tracks(r):
         track_id = (category, instance)
         d.setdefault(video_id, {}).setdefault(track_id, []).append(row)
     return d
+
 
 def cut_video_interval(dst_file, src_file, start, end, video=False, max_size=0, codec=None):
     start_num = round(start * 30)
@@ -147,11 +152,13 @@ def cut_video_interval(dst_file, src_file, start, end, video=False, max_size=0, 
     if status != 0:
         raise ValueError('ffmpeg exit status non-zero: %s' % str(status))
 
+
 def create_tmp_dir(d):
     if os.path.isdir(d):
         clear_dir(d)
         os.rmdir(d)
-    os.makedirs(d, 0755)
+    os.makedirs(d, 0o755)
+
 
 def clear_dir(d):
     # Deletes all files in a directory.
@@ -159,10 +166,12 @@ def clear_dir(d):
     for f in fs:
         os.remove(os.path.join(d, f))
 
+
 def ensure_starts_with_dot(ext):
     if ext[0] == '.':
         return ext
     return '.' + ext
+
 
 if __name__ == '__main__':
     main()
